@@ -92,8 +92,6 @@ dependencies:
   - ninja=1.10.2=py38hff7bd54_0
   - notebook=6.1.5=py38h578d9bd_0
   - numba=0.51.2=py38hc5bc63f_0
-  - numpy=1.19.2=py38h54aff64_0
-  - numpy-base=1.19.2=py38hfa32c7d_0
   - olefile=0.46=py_0
   - openssl=1.1.1h=h516909a_0
   - opt_einsum=3.1.0=py_0
@@ -123,11 +121,13 @@ dependencies:
   - python-dateutil=2.8.1=py_0
   - python-graphviz=0.15=pyhd3eb1b0_0
   - python_abi=3.8=1_cp38
+  - pytorch=1.4.0=cuda101py38h02f0884_0
   - pytz=2020.4=pyhd8ed1ab_0
   - pyyaml=5.3.1=py38h7b6447c_1
   - pyzmq=20.0.0=py38h1d1b12f_1
   - qt=5.9.7=h5867ecd_1
   - readline=8.0=h7b6447c_0
+  - ruptures=1.0.6=pyhd8ed1ab_0
   - scikit-learn=0.23.2=py38h5d63f67_3
   - scipy=1.5.3=py38h828c644_0
   - send2trash=1.5.0=py_0
@@ -154,13 +154,63 @@ dependencies:
   - zlib=1.2.11=h7b6447c_3
   - zstd=1.4.5=h9ceee32_0
   - pip:
+    - absl-py==0.11.0
     - accumulation-tree==0.6.2
+    - alibi-detect==0.4.3
+    - astunparse==1.6.3
+    - cachetools==4.2.0
+    - chardet==3.0.4
+    - click==7.1.2
+    - cloudpickle==1.6.0
+    - creme==0.6.1
+    - dask==2020.12.0
     - dataclasses==0.6
+    - dm-tree==0.1.5
+    - filelock==3.0.12
     - future==0.18.2
+    - gast==0.3.3
+    - google-auth==1.24.0
+    - google-auth-oauthlib==0.4.2
+    - google-pasta==0.2.0
+    - grpcio==1.34.0
+    - h5py==2.10.0
+    - idna==2.10
+    - imageio==2.9.0
+    - keras-preprocessing==1.1.2
+    - markdown==3.3.3
+    - mmh3==2.5.1
+    - networkx==2.5
+    - numpy==1.18.5
+    - oauthlib==3.1.0
+    - opencv-python==4.4.0.46
+    - protobuf==3.14.0
+    - pyasn1==0.4.8
+    - pyasn1-modules==0.2.8
     - pyro-api==0.1.2
     - pyudorandom==1.0.0
+    - pywavelets==1.1.1
+    - regex==2020.11.13
+    - requests==2.25.0
+    - requests-oauthlib==1.3.0
+    - rrcf==0.4.3
+    - rsa==4.6
+    - sacremoses==0.0.43
+    - scikit-image==0.17.2
     - tdigest==0.5.2.2
+    - tensorboard==2.4.0
+    - tensorboard-plugin-wit==1.7.0
+    - tensorflow==2.3.1
+    - tensorflow-estimator==2.3.0
+    - tensorflow-probability==0.11.1
+    - termcolor==1.1.0
+    - tifffile==2020.12.8
+    - tokenizers==0.9.4
+    - toolz==0.11.1
     - torch==1.7.0
+    - transformers==4.0.1
     - typing-extensions==3.7.4.3
+    - urllib3==1.26.2
+    - werkzeug==1.0.1
+    - wrapt==1.12.1
 prefix: /home/sandeep/miniconda3/envs/pyro
 
