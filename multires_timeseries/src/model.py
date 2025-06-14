@@ -2,6 +2,38 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+# Start with dropout=0.2 for all of the above. Increase only if overfitting persists.
+DROPOUT = 0.1
+
+"""
+Rotary 
+Encodes both absolute and relative positions
+No separate positional embeddings needed
+Works better for longer sequences
+Embedding stays clean; position enters via attention
+
+
+from rotary_embedding_torch import RotaryEmbedding
+
+rotary_emb = RotaryEmbedding(dim)
+q, k = rotary_emb.rotate_queries_and_keys(q, k)
+"""
+
+class LearnedPositionalEncoding(nn.Module):
+    """
+    Automatically adjust based on training data.
+    Let model learn nonlinear importance of positions.
+    Useful when sinusoidal encoding is too rigid.
+    useful when have fixed max sequence lengths (like 72 steps for 5-min data or 168 for hourly).
+    """
+    def __init__(self, max_len, d_model):
+        super().__init__()
+        self.pos_embed = nn.Embedding(max_len, d_model)
+
+    def forward(self, x):
+        positions = torch.arange(x.size(1), device=x.device).unsqueeze(0)
+        return x + self.pos_embed(positions)
+
 # Positional Encoding to learn order
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=5000):
@@ -23,7 +55,7 @@ class HourlyEncoder(nn.Module):
         super().__init__()
         self.input_proj = nn.Linear(input_dim, d_model)
         self.pos_encoder = PositionalEncoding(d_model)
-        encoder_layer = nn.TransformerEncoderLayer(d_model, n_heads, dim_feedforward=512, dropout=0.1, batch_first=True)
+        encoder_layer = nn.TransformerEncoderLayer(d_model, n_heads, dim_feedforward=512, dropout=DROPOUT, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
 
     def forward(self, x):
@@ -34,6 +66,7 @@ class HourlyEncoder(nn.Module):
 
 # Transformer Decoder for 5-min Series
 class FiveMinDecoder(nn.Module):
+    # Larger decoder can overfit to transient spikes or local noise,
     def __init__(self, input_dim, d_model, n_heads, n_layers):
         # n_heads - more diverse attention patterns. Too many → smaller head size → may underfit
         # n_layers - More capacity for complex patterns. Too many → slower, risk of overfitting
@@ -41,7 +74,7 @@ class FiveMinDecoder(nn.Module):
         super().__init__()
         self.input_proj = nn.Linear(input_dim, d_model)
         self.pos_encoder = PositionalEncoding(d_model)
-        decoder_layer = nn.TransformerDecoderLayer(d_model, n_heads, dim_feedforward=512, dropout=0.1, batch_first=True)
+        decoder_layer = nn.TransformerDecoderLayer(d_model, n_heads, dim_feedforward=512, dropout=DROPOUT, batch_first=True)
         self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=n_layers)
 
     def forward(self, x, memory):
@@ -64,10 +97,13 @@ class MultiTaskHead(nn.Module):
 
 # Full Model
 class MultiResTrafficTransformer(nn.Module):
-    def __init__(self, input_dim_hourly, input_dim_5min, d_model=256, n_heads=8, n_layers=4):
+
+    def __init__(self, input_dim_hourly, input_dim_5min, d_model,
+                 n_heads_encoder, n_layers_encoder,
+                 n_heads_decoder, n_layers_decoder):
         super().__init__()
-        self.encoder = HourlyEncoder(input_dim_hourly, d_model, n_heads, n_layers)
-        self.decoder = FiveMinDecoder(input_dim_5min, d_model, n_heads, n_layers)
+        self.encoder = HourlyEncoder(input_dim_hourly, d_model, n_heads_encoder, n_layers_encoder)
+        self.decoder = FiveMinDecoder(input_dim_5min, d_model, n_heads_decoder, n_layers_decoder)
         self.head = MultiTaskHead(d_model, output_dim_5min=1, output_dim_hourly=1)
 
     def forward(self, hourly_seq, fivemin_seq):

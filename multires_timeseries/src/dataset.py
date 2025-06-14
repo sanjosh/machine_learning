@@ -4,6 +4,9 @@ from torch.utils.data import Dataset
 
 from torch.utils.data import DataLoader, Subset
 
+from multires_timeseries.src.seeder import HOURLY_LEN, FIVEMIN_LEN
+
+
 def get_time_split(dataset, split_ratio=0.8):
     split_idx = int(len(dataset) * split_ratio)
     train_dataset = Subset(dataset, list(range(split_idx)))
@@ -34,7 +37,9 @@ def time_features(index):
 
 # Dataset using AR series with seasonal component, overlapping windows, and time features
 class TrafficDataset(Dataset):
-    def __init__(self, num_days=90, hourly_len=168, fivemin_len=72, features=4, stride=12):
+    # doubled hourly_len to 336, fivemin_len = 144
+    # Longer sequences can give the model more temporal context (e.g., daily and weekly cycles).
+    def __init__(self, num_days=90, hourly_len=HOURLY_LEN, fivemin_len=FIVEMIN_LEN, features=4, stride=12):
         num_samples = num_days * 24  # one per hour
         # 4 synthetic features being generated (e.g. vehicle count, occupancy rate) per time
         base_series = generate_ar_series(num_samples, features)

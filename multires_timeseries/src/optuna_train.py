@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader, random_split
 
 from multires_timeseries.src.dataset import TrafficDataset, get_time_split
 from multires_timeseries.src.model import MultiResTrafficTransformer
+from multires_timeseries.src.seeder import get_study_name, DIM_HOURLY, DIM_5MIN, get_study_number
 
 # Check device
 if torch.backends.mps.is_available():
@@ -46,17 +47,21 @@ def train(model, dataloader, optimizer, criterion_5min, criterion_hourly, device
 # Objective function for Optuna
 def objective(trial):
     d_model = trial.suggest_categorical("d_model", [128, 256, 512])
-    n_heads = trial.suggest_categorical("n_heads", [2, 4, 8])
-    n_layers = trial.suggest_int("n_layers", 2, 6)
+    n_heads_encoder = trial.suggest_categorical("n_heads_encoder", [2, 4, 8])
+    n_layers_encoder = trial.suggest_int("n_layers_encoder", 2, 4, 6)
+    n_heads_decoder = trial.suggest_categorical("n_heads_decoder", [2, 4, 8])
+    n_layers_decoder = trial.suggest_int("n_layers_decoder", 2, 4, 6)
     lr = trial.suggest_loguniform("lr", 1e-5, 1e-3)
     alpha = trial.suggest_uniform("alpha", 0.3, 0.7)
 
     model = MultiResTrafficTransformer(
-        input_dim_hourly=8,
-        input_dim_5min=8,
+        input_dim_hourly=DIM_HOURLY,
+        input_dim_5min=DIM_5MIN,
         d_model=d_model,
-        n_heads=n_heads,
-        n_layers=n_layers,
+        n_heads_encoder=n_heads_encoder,
+        n_layers_encoder=n_layers_encoder,
+        n_heads_decoder=n_heads_decoder,
+        n_layers_decoder=n_layers_decoder,
     ).to(device)
 
     dataset = TrafficDataset()
@@ -93,7 +98,16 @@ def objective(trial):
 
 # Run Optuna study
 if __name__ == "__main__":
-    study = optuna.create_study(study_name="traffic2", load_if_exists=True, direction="minimize", storage="sqlite:///optuna_traffic.db")
+
+    for n in range(get_study_number()):
+        name = get_study_name(n)
+        try:
+            optuna.delete_study(study_name=name, storage="sqlite:///optuna_traffic.db")
+            print(f"deleted {name}")
+        except:
+            pass
+
+    study = optuna.create_study(study_name=get_study_name(), direction="minimize", storage="sqlite:///optuna_traffic.db")
     study.optimize(objective, n_trials=20)
 
     print("Best trial:")
@@ -107,3 +121,6 @@ if __name__ == "__main__":
     import json
     with open("best_hyperparams.json", "w") as f:
         json.dump(trial.params, f, indent=4)
+
+
+    print(f'created {get_study_name()}')

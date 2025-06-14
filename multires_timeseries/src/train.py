@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 from multires_timeseries.src.dataset import TrafficDataset, get_time_split
 from multires_timeseries.src.model import MultiResTrafficTransformer
-from multires_timeseries.src.seeder import set_seed
+from multires_timeseries.src.seeder import set_seed, get_study_name, DIM_HOURLY, DIM_5MIN, get_study_number
 
 
 def collate_fn(batch):
@@ -87,14 +87,16 @@ if __name__ == "__main__":
     set_seed(42)
 
     # Load best trial from Optuna
-    study = optuna.load_study(study_name="traffic2", storage="sqlite:///optuna_traffic.db")  # adjust path
+    study = optuna.load_study(study_name=get_study_name(), storage="sqlite:///optuna_traffic.db")  # adjust path
     best_trial = study.best_trial
     params = best_trial.params
 
     # Model hyperparameters
     d_model = int(params["d_model"])
-    n_heads = int(params["n_heads"])
-    n_layers = int(params["n_layers"])
+    n_heads_encoder = int(params["n_heads_encoder"])
+    n_layers_encoder = int(params["n_layers_encoder"])
+    n_heads_decoder = int(params["n_heads_decoder"])
+    n_layers_decoder = int(params["n_layers_decoder"])
     lr = params["lr"]
     alpha = params["alpha"]
 
@@ -119,10 +121,12 @@ if __name__ == "__main__":
 
     # start with small d_model to avoid overfitting
     # Options : use grid search or optuna
-    model = MultiResTrafficTransformer(input_dim_hourly=8, input_dim_5min=8,
+    model = MultiResTrafficTransformer(input_dim_hourly=DIM_HOURLY, input_dim_5min=DIM_5MIN,
                                        d_model=d_model,  # 128, 256, 512
-                                       n_heads=n_heads,  # 2, 4, 8
-                                       n_layers=n_layers  # 2, 4, 6, 8
+                                       n_heads_encoder=n_heads_encoder,
+                                       n_layers_encoder=n_layers_encoder,
+                                       n_heads_decoder=n_heads_decoder,
+                                       n_layers_decoder=n_layers_decoder,
                                        ).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -141,4 +145,5 @@ if __name__ == "__main__":
     # original_pred = y_pred[:, 0] * std[0] + mean[0]
     train_with_val(model, train_loader, val_loader, optimizer, criterion_5min, criterion_hourly, device, alpha)
 
-    # smaller gap betweem train and validation indicates good generalization or possibly some underfitting still.
+    # train loss less than validation indicates overfitting
+    # smaller gap between train and validation indicates good generalization or possibly some underfitting still.
