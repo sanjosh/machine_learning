@@ -1,10 +1,13 @@
+import optuna
 import torch
 from torch import nn
 
 from torch.utils.data import DataLoader
 
-from multires_timeseries.src.dataset import TrafficDataset
+from multires_timeseries.src.dataset import TrafficDataset, get_time_split
 from multires_timeseries.src.model import MultiResTrafficTransformer
+from multires_timeseries.src.seeder import set_seed
+
 
 def collate_fn(batch):
     hourly, fivemin, y_5min, y_hourly = zip(*batch)
@@ -19,7 +22,7 @@ save_path = "multires_transformer.pth"
 
 
 def train_with_val(model, train_loader, val_loader, optimizer, criterion_5min, criterion_hourly, device,
-                   alpha=0.5, patience=5, min_delta=1e-4, max_epochs=100):
+                   alpha=0.5, patience=10, min_delta=1e-4, max_epochs=100):
     best_val_loss = float('inf')
     epochs_no_improve = 0
 
@@ -80,13 +83,26 @@ def train_with_val(model, train_loader, val_loader, optimizer, criterion_5min, c
 if __name__ == "__main__":
     import torch
 
+    # Set seed for reproducibility
+    set_seed(42)
+
+    # Load best trial from Optuna
+    study = optuna.load_study(study_name="traffic2", storage="sqlite:///optuna_traffic.db")  # adjust path
+    best_trial = study.best_trial
+    params = best_trial.params
+
+    # Model hyperparameters
+    d_model = int(params["d_model"])
+    n_heads = int(params["n_heads"])
+    n_layers = int(params["n_layers"])
+    lr = params["lr"]
+    alpha = params["alpha"]
+
     dataset = TrafficDataset()
     train_size = int(0.8 * len(dataset))
-    train_dataset = torch.utils.data.Subset(dataset, list(range(train_size)))
-    val_dataset = torch.utils.data.Subset(dataset, list(range(train_size, len(dataset))))
-
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    train_ds, val_ds = get_time_split(dataset)
+    train_loader = DataLoader(train_ds, batch_size=32, shuffle=False)
+    val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
 
     if torch.backends.mps.is_available():
         device = torch.device("mps") # for mac
@@ -104,11 +120,12 @@ if __name__ == "__main__":
     # start with small d_model to avoid overfitting
     # Options : use grid search or optuna
     model = MultiResTrafficTransformer(input_dim_hourly=8, input_dim_5min=8,
-                                       d_model=512,  # 128, 256, 512
-                                       n_heads=8,  # 2, 4, 8
-                                       n_layers=6  # 2, 4, 6, 8
+                                       d_model=d_model,  # 128, 256, 512
+                                       n_heads=n_heads,  # 2, 4, 8
+                                       n_layers=n_layers  # 2, 4, 6, 8
                                        ).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     # if mse is used, predictions are off by roughly square root of mse
     # use mae if you don't care about outliers
     criterion_5min = nn.MSELoss()
@@ -122,6 +139,6 @@ if __name__ == "__main__":
     #     'std': dataset.std
     # }, "model_with_scaler.pt")
     # original_pred = y_pred[:, 0] * std[0] + mean[0]
-    train_with_val(model, train_loader, val_loader, optimizer, criterion_5min, criterion_hourly, device)
+    train_with_val(model, train_loader, val_loader, optimizer, criterion_5min, criterion_hourly, device, alpha)
 
     # smaller gap betweem train and validation indicates good generalization or possibly some underfitting still.

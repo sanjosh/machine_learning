@@ -2,6 +2,13 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from torch.utils.data import DataLoader, Subset
+
+def get_time_split(dataset, split_ratio=0.8):
+    split_idx = int(len(dataset) * split_ratio)
+    train_dataset = Subset(dataset, list(range(split_idx)))
+    val_dataset = Subset(dataset, list(range(split_idx, len(dataset))))
+    return train_dataset, val_dataset
 
 def generate_ar_series(length, features, phi=0.9):
     # generating 4 traffic related synthetic features
