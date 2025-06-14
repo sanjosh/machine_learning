@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 
 from multires_timeseries.src.dataset import TrafficDataset, get_time_split
-from multires_timeseries.src.model import MultiResTrafficTransformer
+from multires_timeseries.src.model_with_rotary import MultiResTrafficTransformer
 from multires_timeseries.src.seeder import get_study_name, DIM_HOURLY, DIM_5MIN, get_study_number
 
 # Check device
@@ -25,6 +25,7 @@ def train(model, dataloader, optimizer, criterion_5min, criterion_hourly, device
         fivemin = fivemin.to(device)
         y_5min = y_5min.to(device)
         y_hourly = y_hourly.to(device)
+        y_5min = y_5min.squeeze(-1)  # shape becomes [32, 72]
 
         if is_training:
             optimizer.zero_grad()

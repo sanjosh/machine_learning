@@ -1,7 +1,7 @@
 import optuna
 import torch
 import numpy as np
-from model import MultiResTrafficTransformer  # Adjust if in same file
+from model_with_rotary import MultiResTrafficTransformer  # Adjust if in same file
 from multires_timeseries.src.seeder import get_study_name, HOURLY_LEN, FIVEMIN_LEN, DIM_HOURLY, DIM_5MIN
 
 # Configuration

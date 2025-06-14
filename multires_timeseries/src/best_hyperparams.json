@@ -1,9 +1,9 @@
 {
-    "d_model": 128,
-    "n_heads_encoder": 8,
+    "d_model": 512,
+    "n_heads_encoder": 2,
     "n_layers_encoder": 2,
-    "n_heads_decoder": 8,
+    "n_heads_decoder": 2,
     "n_layers_decoder": 2,
-    "lr": 0.0009842759660444965,
-    "alpha": 0.3671742795356738
+    "lr": 0.0002383322046742769,
+    "alpha": 0.3651615148069694
 }

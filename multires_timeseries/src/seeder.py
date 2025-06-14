@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 def get_study_number():
-    return 7
+    return 9
 
 def get_study_name(number = None):
     if not number:

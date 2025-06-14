@@ -5,7 +5,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from multires_timeseries.src.dataset import TrafficDataset, get_time_split
-from multires_timeseries.src.model import MultiResTrafficTransformer
+from multires_timeseries.src.model_with_rotary import MultiResTrafficTransformer
 from multires_timeseries.src.seeder import set_seed, get_study_name, DIM_HOURLY, DIM_5MIN, get_study_number
 
 
@@ -34,6 +34,7 @@ def train_with_val(model, train_loader, val_loader, optimizer, criterion_5min, c
             fivemin = fivemin.to(device)
             y_5min = y_5min.to(device)
             y_hourly = y_hourly.to(device)
+            y_5min = y_5min.squeeze(-1)  # shape becomes [32, 72]
 
             optimizer.zero_grad()
             pred_5min, pred_hourly = model(hourly, fivemin)
@@ -57,6 +58,7 @@ def train_with_val(model, train_loader, val_loader, optimizer, criterion_5min, c
                 fivemin = fivemin.to(device)
                 y_5min = y_5min.to(device)
                 y_hourly = y_hourly.to(device)
+                y_5min = y_5min.squeeze(-1)  # shape becomes [32, 72]
 
                 pred_5min, pred_hourly = model(hourly, fivemin)
                 loss_5min = criterion_5min(pred_5min, y_5min)
