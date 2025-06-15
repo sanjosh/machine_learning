@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
-from statsmodels.distributions.copula.api import GaussianCopula
-from statsmodels.distributions.copula.copulas import CopulaDistribution
 import statsmodels.api as sm
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score
+from sympy import symbols, Add, Pow, Mul, Symbol
+from scipy.stats import norm
 
 ranges = {
     'body_weight': (60, 80),
@@ -29,7 +29,6 @@ n_samples = 1000
 mean = np.zeros(5)
 z = np.random.multivariate_normal(mean, correlation_matrix, size=n_samples)
 
-from scipy.stats import norm
 u = norm.cdf(z)  # shape (1000, 5), all values in [0, 1]
 
 # copula = GaussianCopula(k_dim=5)
@@ -88,12 +87,61 @@ y_val_pred = ols_model.predict(X_val_poly_const)
 r2_val = r2_score(y_val, y_val_pred)
 print(f"\nValidation R²: {r2_val:.4f}")
 
-# Optional: percent of predictions within ±2 minutes
+# percent of predictions within ±2 minutes
 errors = np.abs(y_val_pred - y_val)
 within_threshold = np.mean(errors <= 2) * 100
 print(f"Predictions within ±2 min: {within_threshold:.2f}%")
 
 poly_feature_names = poly.get_feature_names_out(feature_cols)
 
-for name, coef in zip(poly_feature_names, ols_model.params[1:]):  # Skip intercept
-    print(f"{name}: {coef:.3f}")
+terms = []
+for name, coef in zip(poly_feature_names, ols_model.params[1:]):
+    print(f"coefficient {name}: {coef:.3f}")
+    terms.append(f"{coef:.3f}*{name}")
+equation = f"{ols_model.params[0]:.3f} + " + " + ".join(terms)
+print("f(x) =", equation)
+
+# Define symbols for each original variable
+symbol_map = {
+    'body_weight': symbols('body_weight'),
+    'height': symbols('height'),
+    'start_time': symbols('start_time'),
+    'destination_code': symbols('destination_code')
+}
+
+def parse_feature_term(term: str):
+    factors = term.split(' ')
+    expr_parts = []
+    for f in factors:
+        # Handle powers like body_weight^2
+        if '^' in f:
+            base, exp = f.split('^')
+            expr_parts.append(Pow(symbol_map[base], int(exp)))
+        else:
+            expr_parts.append(symbol_map[f])
+    return Mul(*expr_parts)
+
+# Get polynomial feature names
+feature_names = poly.get_feature_names_out(['body_weight', 'height', 'start_time', 'destination_code'])
+intercept = ols_model.params[0]
+coeffs = ols_model.params[1:]
+
+# Map each feature name to a sympy expression
+equation = intercept
+for name, coef in zip(feature_names, coeffs):
+    equation += coef * parse_feature_term(name)
+
+print("Nonlinear model equation:")
+print(equation.simplify())
+
+body_weight, height, start_time, destination_code = symbols('body_weight height start_time destination_code')
+
+sample_values = {
+    body_weight: 72,
+    height: 5.9,
+    start_time: 45,
+    destination_code: 12
+}
+
+result = equation.evalf(subs=sample_values)
+print(f"Predicted time_to_arrival: {result:.2f} minutes")
